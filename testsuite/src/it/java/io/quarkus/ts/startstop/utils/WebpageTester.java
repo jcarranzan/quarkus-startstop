@@ -39,24 +39,35 @@ public class WebpageTester {
         final long startTime = now;
         boolean found = false;
         long foundTimestamp = -1L;
+        LOGGER.info("Starting to test web page at " + url + " for string `" + stringToLookFor + "` with timeout of " + timeoutS + " seconds.");
         while (now - startTime < 1000 * timeoutS) {
-            URLConnection c = URI.create(url).toURL().openConnection();
-            c.setRequestProperty("Accept", "*/*");
-            c.setConnectTimeout(500);
-            try (InputStream in = c.getInputStream();
-                 Scanner scanner = new Scanner(in, StandardCharsets.UTF_8.toString())) {
-                scanner.useDelimiter("\\A");
-                webPage = scanner.hasNext() ? scanner.next() : "";
-            } catch (Exception e) {
-                LOGGER.debug("Waiting `" + stringToLookFor + "' to appear on " + url);
-            }
-            if (webPage.contains(stringToLookFor)) {
-                found = true;
-                if (measureTime) {
-                    foundTimestamp = System.currentTimeMillis();
+            try {
+                URLConnection c = URI.create(url).toURL().openConnection();
+                c.setRequestProperty("Accept", "*/*");
+                c.setConnectTimeout(500);
+                LOGGER.debug("Attempting to connect to " + url);
+
+                try (InputStream in = c.getInputStream();
+                     Scanner scanner = new Scanner(in, StandardCharsets.UTF_8.toString())) {
+                    scanner.useDelimiter("\\A");
+                    webPage = scanner.hasNext() ? scanner.next() : "";
+                } catch (Exception e) {
+                    LOGGER.debug("Waiting `" + stringToLookFor + "' to appear on " + url + " Exception : " + e.getMessage());
                 }
-                break;
+                if (webPage.contains(stringToLookFor)) {
+                    found = true;
+                    if (measureTime) {
+                        foundTimestamp = System.currentTimeMillis();
+                    }
+                    LOGGER.info("String: " + stringToLookFor + " found on the page.");
+                    break;
+                } else {
+                    LOGGER.debug("String not found on the page. Retrying...");
+                }
+            } catch (IOException e) {
+                LOGGER.debug("Connection attempt failed with exception: " + e.getMessage());
             }
+
             if (!measureTime) {
                 Thread.sleep(500);
             } else {
